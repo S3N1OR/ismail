@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Учет ковров — заказы, клиенты, отчёты (LocalStorage)</title>
+    <style>
+      :root {
+        --bg: #0e1116;
+        --card: #161b22;
+        --text: #e7e9ee;
+        --muted: #9aa3b2;
+        --ring: #3b82f673;
+        --border: #232a35;
+        --acc: #3b82f6;
+        --good: #10b981;
+        --bad: #ef4444;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+          Cantarell, Noto Sans, sans-serif;
+      }
+      header {
+        padding: 14px 12px;
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(14, 17, 22, 0.95),
+          rgba(14, 17, 22, 0.85)
+        );
+        backdrop-filter: saturate(140%) blur(8px);
+        z-index: 5;
+      }
+      h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 18px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+      }
+      .card .head {
+        padding: 12px 8px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+      .card .body {
+        padding: 14px;
+      }
+      label {
+        display: block;
+        margin: 0 0 6px 2px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #0c1118;
+        color: var(--text);
+        outline: none;
+      }
+      input:focus,
+      select:focus {
+        border-color: var(--acc);
+        box-shadow: 0 0 0 4px var(--ring);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 10px;
+      }
+      /* .col-6 {
+        grid-column: span 6;
+      }
+      .col-4 {
+        grid-column: span 4;
+      }
+      .col-3 {
+        grid-column: span 3;
+      }
+      .col-8 {
+        grid-column: span 8;
+      } */
+      .col-12 {
+        /* grid-column: span 12; */
+        display: flex;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        width: 100%;
+      }
+      button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #121826;
+        color: var(--text);
+        cursor: pointer;
+      }
+      .primary {
+        background: var(--acc);
+        border-color: transparent;
+        color: white;
+      }
+      .muted {
+        background: #0f1520;
+      }
+      .danger {
+        background: #2a1313;
+        border-color: #4a1b1b;
+        color: #ffb4b4;
+      }
+      .good {
+        background: #0f2a21;
+        border-color: #1a3e30;
+        color: #b1ffdc;
+      }
+      .topbar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        padding: 6px 9px;
+        border-radius: 999px;
+        background: #0e1624;
+        border: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .table-wrap {
+        overflow: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+        min-width: 720px;
+      }
+      thead th {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: left;
+        padding: 0 10px;
+      }
+      tbody tr {
+        background: #0f1520;
+        border: 1px solid var(--border);
+      }
+      td {
+        padding: 10px;
+      }
+
+      /* KPI grid */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+      .kpi {
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #0f1520;
+      }
+      .kpi b {
+        font-size: 18px;
+      }
+
+      /* Modals */
+      dialog {
+        border: none;
+        border-radius: 16px;
+        max-width: 900px;
+        width: 96%;
+        padding: 0;
+        background: #0b1119;
+        color: var(--text);
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.65);
+      }
+      .modal-head {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+      .modal-body {
+        padding: 14px;
+      }
+      .tabs {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .tab {
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        background: #0f1520;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .tab.active {
+        background: var(--acc);
+        color: white;
+        border-color: transparent;
+      }
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 10px;
+        margin: 8px 0;
+      }
+
+      /* Mobile tweaks */
+      @media (max-width: 640px) {
+        h1 {
+          font-size: 18px;
+        }
+        .container {
+          padding: 12px;
+        }
+        .row {
+          grid-template-columns: repeat(6, 1fr);
+        }
+        .col-8 {
+          grid-column: span 6;
+        }
+        .col-6 {
+          grid-column: span 6;
+        }
+        .col-4 {
+          grid-column: span 6;
+        }
+        .col-3 {
+          grid-column: span 3;
+        }
+        .kpi-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        dialog {
+          width: 98%;
+          max-width: 98%;
+          margin: auto;
+
+        }
+        button {
+          padding: 10px 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Учет ковров · главная — заказы</h1>
+    </header>
+
+    <div class="container">
+      <!-- Панель действий -->
+      <section class="card">
+        <div class="head">
+          <div style="display: flex; gap: 8px; align-items: center">
+            <b>Новые заказы</b>
+          </div>
+          <div class="actions">
+            <button id="openReportsBtn" class="good">Отчёты</button>
+            <button id="openClientsBtn">База клиентов</button>
+            <button id="openAddClientBtn" class="muted">
+              Добавить клиента
+            </button>
+          </div>
+        </div>
+        <div class="body">
+          <form id="orderForm">
+            <div class="row">
+              <div class="col-8">
+                <label>Клиент</label>
+                <select id="orderClient" required></select>
+              </div>
+              <div class="col-4 actions" style="align-items: end">
+                <button
+                  type="button"
+                  id="refreshClients"
+                  title="Обновить список клиентов"
+                >
+                  Обновить список
+                </button>
+              </div>
+              <div class="col-3">
+                <label>Кол-во ковров</label>
+                <input
+                  id="orderQty"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="1"
+                  required
+                />
+              </div>
+              <div class="col-3">
+                <label>Длина (м)</label>
+                <input
+                  id="orderLength"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="1"
+                  required
+                />
+              </div>
+              <div class="col-3">
+                <label>Ширина (м)</label>
+                <input
+                  id="orderWidth"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="1"
+                  required
+                />
+              </div>
+              <div class="col-3">
+                <label>Цена за м² (₽)</label>
+                <input
+                  id="orderPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="350"
+                  required
+                />
+              </div>
+              <div class="col-6">
+                <label>Квадратура (м²)</label>
+                <input id="orderArea" readonly />
+              </div>
+              <div class="col-6">
+                <label>Итого (₽)</label>
+                <input id="orderTotal" readonly />
+              </div>
+              <div class="col-12 actions">
+                <button class="primary" type="submit">Добавить заказ</button>
+                <button type="button" id="clearOrder" class="muted">
+                  Очистить форму
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Список заказов -->
+      <section class="card" style="margin-top: 18px">
+        <div class="head"><b>Заказы</b></div>
+        <div class="body">
+          <div class="topbar">
+            <input
+              id="searchOrders"
+              placeholder="Поиск по имени клиента…"
+              style="flex: 1"
+            />
+            <span class="pill" id="ordersCount">0 заказов</span>
+            <div class="actions">
+              <button id="exportAll">Экспорт JSON</button>
+              <button id="importAll">Импорт JSON</button>
+              <input
+                id="importFile"
+                type="file"
+                accept="application/json"
+                style="display: none"
+              />
+              <button id="wipeAll" class="danger">Очистить всё</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Клиент</th>
+                  <th>Телефон</th>
+                  <th>Кол-во</th>
+                  <th>Длина</th>
+                  <th>Ширина</th>
+                  <th>м²</th>
+                  <th>₽/м²</th>
+                  <th>Итого</th>
+                  <th>Создан</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="ordersTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Модал: База клиентов (список) -->
+    <dialog id="clientsModal">
+      <div class="modal-head">
+        <div><b>База клиентов</b></div>
+        <div class="actions">
+          <button id="clientsAddBtn" class="primary">Добавить клиента</button>
+          <button onclick="document.getElementById('clientsModal').close()">
+            ✕
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="topbar">
+          <input
+            id="searchClients"
+            placeholder="Поиск по имени / адресу / телефону"
+            style="flex: 1"
+          />
+          <span class="pill" id="clientsCount">0 записей</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Телефон</th>
+                <th>Адрес</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="clientsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Модал: Добавить/Редактировать клиента -->
+    <dialog id="clientEditModal">
+      <div class="modal-head">
+        <div id="clientEditTitle"><b>Новый клиент</b></div>
+        <button onclick="document.getElementById('clientEditModal').close()">
+          ✕
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="clientForm">
+          <input type="hidden" id="clientId" />
+          <div class="row">
+            <div class="col-6">
+              <label>Имя</label>
+              <input id="clientName" required placeholder="Иван Иванов" />
+            </div>
+            <div class="col-6">
+              <label>Телефон</label>
+              <input id="clientPhone" placeholder="+7 900 000-00-00" />
+            </div>
+            <div class="col-12">
+              <label>Адрес</label>
+              <input
+                id="clientAddress"
+                placeholder="г. Москва, ул. Пример, 1"
+              />
+            </div>
+            <div class="col-12 actions">
+              <button class="primary" type="submit">Сохранить</button>
+              <button class="muted" type="button" id="clientFormReset">
+                Очистить
+              </button>
+            </div>
+          </div>
+        </form>
+        <p class="print-note">
+          ID клиента создаётся автоматически. Только имя, телефон и адрес.
+        </p>
+      </div>
+    </dialog>
+
+    <!-- Модал: Отчёт по заказу -->
+    <dialog id="orderReportModal">
+      <div class="modal-head">
+        <div><b>Отчёт по заказу</b></div>
+        <button onclick="document.getElementById('orderReportModal').close()">
+          ✕
+        </button>
+      </div>
+      <div class="modal-body" id="orderReportBody"></div>
+      <div
+        class="modal-body"
+        style="display: flex; gap: 10px; justify-content: flex-end"
+      >
+        <button onclick="window.print()" class="good">Печать</button>
+        <button
+          onclick="document.getElementById('orderReportModal').close()"
+          class="muted"
+        >
+          Закрыть
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Модал: Система отчётов -->
+    <dialog id="reportsModal">
+      <div class="modal-head">
+        <div style="display: flex; gap: 8px; align-items: center">
+          <b>Отчёты</b> <span class="pill" id="reportsRangeText"></span>
+        </div>
+        <div class="actions">
+          <button id="exportCsvBtn">Экспорт CSV</button>
+          <button onclick="window.print()" class="good">Печать</button>
+          <button onclick="document.getElementById('reportsModal').close()">
+            ✕
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="tabs">
+          <div class="tab active" data-tab="summary">Сводка</div>
+          <div class="tab" data-tab="byClient">По клиентам</div>
+          <div class="tab" data-tab="byDay">По дням</div>
+        </div>
+
+        <div class="filters">
+          <div class="col-4">
+            <label>С клиента</label>
+            <select id="filterClient"></select>
+          </div>
+          <div class="col-4">
+            <label>Период: начало</label>
+            <input type="date" id="dateFrom" />
+          </div>
+          <div class="col-4">
+            <label>Период: конец</label>
+            <input type="date" id="dateTo" />
+          </div>
+          <div class="col-12 actions" style="margin-top: 6px">
+            <button id="quickToday">Сегодня</button>
+            <button id="quickWeek">Эта неделя</button>
+            <button id="quickMonth">Этот месяц</button>
+            <button id="applyFilters" class="primary">Применить</button>
+            <button id="resetFilters" class="muted">Сброс</button>
+          </div>
+        </div>
+
+        <!-- Сводка -->
+        <div id="tab-summary">
+          <div class="kpi-grid" style="margin: 8px 0 12px">
+            <div class="kpi">
+              <div>Заказов</div>
+              <b id="kpiOrders">0</b>
+            </div>
+            <div class="kpi">
+              <div>Площадь м²</div>
+              <b id="kpiArea">0</b>
+            </div>
+            <div class="kpi">
+              <div>Выручка ₽</div>
+              <b id="kpiRevenue">0</b>
+            </div>
+            <div class="kpi">
+              <div>Средняя цена ₽/м²</div>
+              <b id="kpiAvgPrice">0</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- По клиентам -->
+        <div id="tab-byClient" style="display: none">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Клиент</th>
+                  <th>Телефон</th>
+                  <th>Заказов</th>
+                  <th>Площадь м²</th>
+                  <th>Выручка ₽</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyByClient"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- По дням -->
+        <div id="tab-byDay" style="display: none">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Заказов</th>
+                  <th>Площадь м²</th>
+                  <th>Выручка ₽</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyByDay"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <script>
+      // ====== Ключи LocalStorage ======
+      const K_CLIENTS = "carpet_clients_v2";
+      const K_ORDERS = "carpet_orders_v2";
+      const K_SEQ_CLIENT = "carpet_seq_client_v2";
+      const K_SEQ_ORDER = "carpet_seq_order_v2";
+
+      const store = {
+        load(key) {
+          try {
+            return JSON.parse(localStorage.getItem(key) || "[]");
+          } catch {
+            return [];
+          }
+        },
+        save(key, val) {
+          localStorage.setItem(key, JSON.stringify(val));
+        },
+        nextSeq(key) {
+          const n = parseInt(localStorage.getItem(key) || "1", 10);
+          localStorage.setItem(key, String(n + 1));
+          return n;
+        },
+        reset() {
+          [K_CLIENTS, K_ORDERS, K_SEQ_CLIENT, K_SEQ_ORDER].forEach((k) =>
+            localStorage.removeItem(k)
+          );
+        },
+      };
+
+      // ====== Клиенты ======
+      function getClients() {
+        return store.load(K_CLIENTS);
+      }
+      function saveClients(list) {
+        store.save(K_CLIENTS, list);
+      }
+      function upsertClient(obj) {
+        const list = getClients();
+        if (!obj.id) {
+          obj.id = store.nextSeq(K_SEQ_CLIENT);
+        }
+        const i = list.findIndex((x) => x.id === obj.id);
+        if (i >= 0) list[i] = obj;
+        else list.push(obj);
+        saveClients(list);
+        refreshClientsSelect();
+        renderClients();
+        fillFilterClients();
+      }
+      function deleteClient(id) {
+        if (!confirm("Удалить клиента #" + id + "?")) return;
+        saveClients(getClients().filter((x) => x.id !== id));
+        refreshClientsSelect();
+        renderClients();
+        fillFilterClients();
+      }
+
+      // ====== Заказы ======
+      function getOrders() {
+        return store.load(K_ORDERS);
+      }
+      function saveOrders(list) {
+        store.save(K_ORDERS, list);
+      }
+      function createOrder(o) {
+        o.id = store.nextSeq(K_SEQ_ORDER);
+        o.createdAt = Date.now();
+        const list = getOrders();
+        list.push(o);
+        saveOrders(list);
+        renderOrders(document.getElementById("searchOrders").value);
+        clearOrderForm();
+        renderReports();
+      }
+      function deleteOrder(id) {
+        if (!confirm("Удалить заказ #" + id + "?")) return;
+        saveOrders(getOrders().filter((x) => x.id !== id));
+        renderOrders(document.getElementById("searchOrders").value);
+        renderReports();
+      }
+
+      // ====== Вычисления ======
+      const fmt2 = (n) => (Math.round(Number(n) * 100) / 100).toFixed(2);
+      const money = (n) =>
+        new Intl.NumberFormat("ru-RU").format(Number(n) || 0);
+      function computeOrder() {
+        const qty = Math.max(1, Number(orderQty.value || 0));
+        const L = Number(orderLength.value || 0);
+        const W = Number(orderWidth.value || 0);
+        const price = Number(orderPrice.value || 0);
+        const area = qty * L * W; // м²
+        const total = area * price;
+        orderArea.value = fmt2(area);
+        orderTotal.value = fmt2(total);
+      }
+
+      // ====== Рендеры списков ======
+      function refreshClientsSelect() {
+        const clients = getClients();
+        orderClient.innerHTML =
+          '<option value="" disabled selected>Выберите клиента…</option>' +
+          clients
+            .map(
+              (c) =>
+                `<option value="${c.id}">${escapeHtml(c.name)} — ${escapeHtml(
+                  c.phone || ""
+                )}</option>`
+            )
+            .join("");
+      }
+
+      function renderClients(filter = "") {
+        const tb = document.getElementById("clientsTbody");
+        const list = getClients();
+        const needle = (filter || searchClients.value || "")
+          .trim()
+          .toLowerCase();
+        const filtered = !needle
+          ? list
+          : list.filter(
+              (x) =>
+                (x.name || "").toLowerCase().includes(needle) ||
+                (x.phone || "").toLowerCase().includes(needle) ||
+                (x.address || "").toLowerCase().includes(needle)
+            );
+        tb.innerHTML = "";
+        for (const c of filtered) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+          <td>${c.id}</td>
+          <td>${escapeHtml(c.name)}</td>
+          <td>${escapeHtml(c.phone || "")}</td>
+          <td>${escapeHtml(c.address || "")}</td>
+          <td>
+            <div class="actions">
+              <button onclick="openEditClient(${c.id})">Редакт.</button>
+              <button class="danger" onclick="deleteClient(${
+                c.id
+              })">Удалить</button>
+            </div>
+          </td>`;
+          tb.appendChild(tr);
+        }
+        document.getElementById(
+          "clientsCount"
+        ).innerText = `${filtered.length} записей`;
+      }
+
+      function renderOrders(filter = "") {
+        const tb = document.getElementById("ordersTbody");
+        const orders = getOrders();
+        const clients = getClients();
+        const needle = (filter || "").trim().toLowerCase();
+        const getClient = (id) =>
+          clients.find((c) => c.id === id) || {
+            name: "—",
+            phone: "",
+            address: "",
+          };
+        const filtered = !needle
+          ? orders
+          : orders.filter((o) =>
+              (getClient(o.clientId).name || "").toLowerCase().includes(needle)
+            );
+        tb.innerHTML = "";
+        for (const o of filtered) {
+          const c = getClient(o.clientId);
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+          <td>${o.id}</td>
+          <td>${escapeHtml(c.name)}</td>
+          <td>${escapeHtml(c.phone || "")}</td>
+          <td>${o.qty}</td>
+          <td>${fmt2(o.length)}</td>
+          <td>${fmt2(o.width)}</td>
+          <td>${fmt2(o.area)}</td>
+          <td>${fmt2(o.price)}</td>
+          <td><b>${money(fmt2(o.total))}</b></td>
+          <td>${new Date(o.createdAt).toLocaleString()}</td>
+          <td>
+            <div class="actions">
+              <button class="primary" onclick="openOrderReport(${
+                o.id
+              })">Отчёт</button>
+              <button class="danger" onclick="deleteOrder(${
+                o.id
+              })">Удалить</button>
+            </div>
+          </td>`;
+          tb.appendChild(tr);
+        }
+        ordersCount.innerText = `${filtered.length} заказов`;
+      }
+
+      function escapeHtml(str) {
+        return (str || "").replace(
+          /[&<>"']/g,
+          (s) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            }[s])
+        );
+      }
+
+      // ====== Отчёт по заказу ======
+      function openOrderReport(id) {
+        const order = getOrders().find((x) => x.id === id);
+        if (!order) return;
+        const client = getClients().find((x) => x.id === order.clientId);
+        const html = `
+        <h3 style="margin:0 0 8px 0">Заказ #${order.id}</h3>
+        <div class="row" style="margin-bottom:8px">
+          <div class="col-6"><div class="pill">Создано: ${new Date(
+            order.createdAt
+          ).toLocaleString()}</div></div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <label>Клиент</label>
+            <div>${escapeHtml(client?.name || "—")}</div>
+          </div>
+          <div class="col-6">
+            <label>Телефон</label>
+            <div>${escapeHtml(client?.phone || "-")}</div>
+          </div>
+          <div class="col-12">
+            <label>Адрес</label>
+            <div>${escapeHtml(client?.address || "-")}</div>
+          </div>
+          <div class="col-3"><label>Кол-во ковров</label><div>${
+            order.qty
+          }</div></div>
+          <div class="col-3"><label>Длина (м)</label><div>${fmt2(
+            order.length
+          )}</div></div>
+          <div class="col-3"><label>Ширина (м)</label><div>${fmt2(
+            order.width
+          )}</div></div>
+          <div class="col-3"><label>Квадратура (м²)</label><div>${fmt2(
+            order.area
+          )}</div></div>
+          <div class="col-6"><label>Цена за м² (₽)</label><div>${fmt2(
+            order.price
+          )}</div></div>
+          <div class="col-6"><label>Итого (₽)</label><div style="font-size:22px"><b>${money(
+            fmt2(order.total)
+          )}</b></div></div>
+        </div>
+        <p class="print-note" style="margin-top:10px">Подсказка: «Печать» сохранит отчёт в PDF.</p>
+      `;
+        document.getElementById("orderReportBody").innerHTML = html;
+        document.getElementById("orderReportModal").showModal();
+      }
+
+      // ====== Reports ======
+      function fillFilterClients() {
+        const sel = document.getElementById("filterClient");
+        const clients = getClients();
+        sel.innerHTML =
+          '<option value="">Все клиенты</option>' +
+          clients
+            .map(
+              (c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+            )
+            .join("");
+      }
+      function openReports() {
+        fillFilterClients();
+        // Default preset: this month
+        quickMonth();
+        document.getElementById("reportsModal").showModal();
+      }
+      function getDateStr(ts) {
+        const d = new Date(ts);
+        return d.toISOString().slice(0, 10);
+      }
+      function parseDateInput(v) {
+        return v ? new Date(v + "T00:00:00").getTime() : null;
+      }
+
+      function filterOrders() {
+        const cid = document.getElementById("filterClient").value;
+        const from = parseDateInput(document.getElementById("dateFrom").value);
+        const toInc = parseDateInput(document.getElementById("dateTo").value);
+        const to = toInc ? toInc + 24 * 60 * 60 * 1000 - 1 : null; // inclusive end
+        let list = getOrders();
+        if (cid) {
+          list = list.filter((o) => String(o.clientId) === String(cid));
+        }
+        if (from != null) {
+          list = list.filter((o) => o.createdAt >= from);
+        }
+        if (to != null) {
+          list = list.filter((o) => o.createdAt <= to);
+        }
+        // update range text
+        const rtxt = `${document.getElementById("dateFrom").value || "…"} — ${
+          document.getElementById("dateTo").value || "…"
+        }`;
+        document.getElementById("reportsRangeText").innerText = rtxt;
+        return list;
+      }
+
+      function renderReports() {
+        const orders = filterOrders();
+        // KPIs
+        const ordersCount = orders.length;
+        const areaSum = orders.reduce((a, b) => a + Number(b.area || 0), 0);
+        const revSum = orders.reduce((a, b) => a + Number(b.total || 0), 0);
+        const avgPrice = areaSum > 0 ? revSum / areaSum : 0;
+        document.getElementById("kpiOrders").innerText = ordersCount;
+        document.getElementById("kpiArea").innerText = fmt2(areaSum);
+        document.getElementById("kpiRevenue").innerText = money(fmt2(revSum));
+        document.getElementById("kpiAvgPrice").innerText = fmt2(avgPrice);
+
+        // by client
+        const byClient = {};
+        for (const o of orders) {
+          const c = getClients().find((x) => x.id === o.clientId);
+          const key = c ? `${c.id}` : "unknown";
+          if (!byClient[key])
+            byClient[key] = {
+              name: c?.name || "—",
+              phone: c?.phone || "",
+              orders: 0,
+              area: 0,
+              rev: 0,
+            };
+          const r = byClient[key];
+          r.orders++;
+          r.area += Number(o.area || 0);
+          r.rev += Number(o.total || 0);
+        }
+        const arrClient = Object.values(byClient).sort((a, b) => b.rev - a.rev);
+        const tbc = document.getElementById("tbodyByClient");
+        tbc.innerHTML = "";
+        for (const r of arrClient) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${escapeHtml(r.name)}</td><td>${escapeHtml(
+            r.phone
+          )}</td><td>${r.orders}</td><td>${fmt2(r.area)}</td><td>${money(
+            fmt2(r.rev)
+          )}</td>`;
+          tbc.appendChild(tr);
+        }
+
+        // by day
+        const byDay = {};
+        for (const o of orders) {
+          const d = getDateStr(o.createdAt);
+          if (!byDay[d]) byDay[d] = { orders: 0, area: 0, rev: 0 };
+          byDay[d].orders++;
+          byDay[d].area += Number(o.area || 0);
+          byDay[d].rev += Number(o.total || 0);
+        }
+        const arrDay = Object.entries(byDay)
+          .map(([date, vals]) => ({ date, ...vals }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        const tbd = document.getElementById("tbodyByDay");
+        tbd.innerHTML = "";
+        for (const r of arrDay) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${r.date}</td><td>${r.orders}</td><td>${fmt2(
+            r.area
+          )}</td><td>${money(fmt2(r.rev))}</td>`;
+          tbd.appendChild(tr);
+        }
+      }
+
+      function exportCsv() {
+        const orders = filterOrders();
+        const clients = getClients();
+        const rows = [
+          [
+            "ID заказа",
+            "Клиент",
+            "Телефон",
+            "Кол-во",
+            "Длина",
+            "Ширина",
+            "м²",
+            "Цена/м²",
+            "Итого",
+            "Создан",
+          ],
+        ];
+        for (const o of orders) {
+          const c = clients.find((x) => x.id === o.clientId) || {};
+          rows.push([
+            o.id,
+            c.name || "",
+            c.phone || "",
+            o.qty,
+            fmt2(o.length),
+            fmt2(o.width),
+            fmt2(o.area),
+            fmt2(o.price),
+            fmt2(o.total),
+            new Date(o.createdAt).toLocaleString(),
+          ]);
+        }
+        const csv = rows
+          .map((r) =>
+            r.map((x) => '"' + String(x).replaceAll('"', '""') + '"').join(",")
+          )
+          .join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "report.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // ====== Tabs for reports ======
+      function switchTab(name) {
+        document
+          .querySelectorAll(".tab")
+          .forEach((el) =>
+            el.classList.toggle("active", el.dataset.tab === name)
+          );
+        document.getElementById("tab-summary").style.display =
+          name === "summary" ? "block" : "none";
+        document.getElementById("tab-byClient").style.display =
+          name === "byClient" ? "block" : "none";
+        document.getElementById("tab-byDay").style.display =
+          name === "byDay" ? "block" : "none";
+      }
+
+      // ====== Открытие/редактирование клиента ======
+      function openNewClient() {
+        clientId.value = "";
+        clientName.value = "";
+        clientPhone.value = "";
+        clientAddress.value = "";
+        clientEditTitle.innerHTML = "<b>Новый клиент</b>";
+        document.getElementById("clientEditModal").showModal();
+      }
+      function openEditClient(id) {
+        const c = getClients().find((x) => x.id === id);
+        if (!c) return;
+        clientId.value = c.id;
+        clientName.value = c.name || "";
+        clientPhone.value = c.phone || "";
+        clientAddress.value = c.address || "";
+        clientEditTitle.innerHTML = `<b>Клиент #${c.id}</b>`;
+        document.getElementById("clientEditModal").showModal();
+      }
+
+      // ====== События UI ======
+      // Заказ — вычисления
+      const orderClient = document.getElementById("orderClient");
+      const orderQty = document.getElementById("orderQty");
+      const orderLength = document.getElementById("orderLength");
+      const orderWidth = document.getElementById("orderWidth");
+      const orderPrice = document.getElementById("orderPrice");
+      const orderArea = document.getElementById("orderArea");
+      const orderTotal = document.getElementById("orderTotal");
+
+      [orderQty, orderLength, orderWidth, orderPrice].forEach((el) =>
+        el.addEventListener("input", computeOrder)
+      );
+
+      function clearOrderForm() {
+        orderForm.reset();
+        orderQty.value = 1;
+        orderLength.value = 1;
+        orderWidth.value = 1;
+        orderPrice.value = 350;
+        computeOrder();
+      }
+
+      document.getElementById("orderForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        computeOrder();
+        const clientId = Number(orderClient.value);
+        if (!clientId) {
+          alert("Выберите клиента");
+          return;
+        }
+        const qty = Math.max(1, Number(orderQty.value || 0));
+        const length = Number(orderLength.value || 0);
+        const width = Number(orderWidth.value || 0);
+        const price = Number(orderPrice.value || 0);
+        const area = Number(fmt2(qty * length * width));
+        const total = Number(fmt2(area * price));
+        createOrder({ clientId, qty, length, width, price, area, total });
+      });
+
+      document
+        .getElementById("clearOrder")
+        .addEventListener("click", clearOrderForm);
+
+      // Заказы: поиск
+      document
+        .getElementById("searchOrders")
+        .addEventListener("input", (e) => renderOrders(e.target.value));
+
+      // Модалы клиентов
+      document
+        .getElementById("openClientsBtn")
+        .addEventListener("click", () => {
+          renderClients();
+          document.getElementById("clientsModal").showModal();
+        });
+      document
+        .getElementById("openAddClientBtn")
+        .addEventListener("click", openNewClient);
+      document
+        .getElementById("clientsAddBtn")
+        .addEventListener("click", openNewClient);
+      document
+        .getElementById("refreshClients")
+        .addEventListener("click", refreshClientsSelect);
+      document
+        .getElementById("searchClients")
+        .addEventListener("input", () => renderClients());
+
+      // Форма клиента
+      document.getElementById("clientForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const obj = {
+          id: Number(clientId.value) || undefined,
+          name: clientName.value.trim(),
+          phone: clientPhone.value.trim(),
+          address: clientAddress.value.trim(),
+        };
+        if (!obj.name) {
+          alert("Введите имя");
+          return;
+        }
+        upsertClient(obj);
+        document.getElementById("clientEditModal").close();
+      });
+      document
+        .getElementById("clientFormReset")
+        .addEventListener("click", () => {
+          clientForm.reset();
+          clientId.value = "";
+        });
+
+      // Экспорт/Импорт/Сброс
+      document.getElementById("exportAll").addEventListener("click", () => {
+        const data = { clients: getClients(), orders: getOrders() };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "carpet_backup.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+      document
+        .getElementById("importAll")
+        .addEventListener("click", () => importFile.click());
+      document.getElementById("importFile").addEventListener("change", (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = () => {
+          try {
+            const data = JSON.parse(r.result);
+            if (
+              data &&
+              Array.isArray(data.clients) &&
+              Array.isArray(data.orders)
+            ) {
+              saveClients(data.clients);
+              saveOrders(data.orders);
+              const maxC = data.clients.reduce(
+                (m, x) => Math.max(m, Number(x.id) || 0),
+                0
+              );
+              const maxO = data.orders.reduce(
+                (m, x) => Math.max(m, Number(x.id) || 0),
+                0
+              );
+              localStorage.setItem(K_SEQ_CLIENT, String(maxC + 1));
+              localStorage.setItem(K_SEQ_ORDER, String(maxO + 1));
+              refreshClientsSelect();
+              renderClients();
+              renderOrders("");
+              renderReports();
+              fillFilterClients();
+              alert("Импорт завершён");
+            } else {
+              alert("Неверный формат файла");
+            }
+          } catch (err) {
+            alert("Ошибка импорта: " + err.message);
+          }
+        };
+        r.readAsText(f);
+        e.target.value = "";
+      });
+      document.getElementById("wipeAll").addEventListener("click", () => {
+        if (confirm("Удалить ВСЕ данные (клиенты и заказы)?")) {
+          store.reset();
+          refreshClientsSelect();
+          renderClients();
+          renderOrders("");
+          clearOrderForm();
+          renderReports();
+          fillFilterClients();
+        }
+      });
+
+      // ====== Reports UI events ======
+      document
+        .getElementById("openReportsBtn")
+        .addEventListener("click", openReports);
+      document
+        .getElementById("applyFilters")
+        .addEventListener("click", renderReports);
+      document.getElementById("resetFilters").addEventListener("click", () => {
+        document.getElementById("dateFrom").value = "";
+        document.getElementById("dateTo").value = "";
+        document.getElementById("filterClient").value = "";
+        renderReports();
+      });
+      document
+        .getElementById("exportCsvBtn")
+        .addEventListener("click", exportCsv);
+
+      document
+        .querySelectorAll(".tab")
+        .forEach((t) =>
+          t.addEventListener("click", () => switchTab(t.dataset.tab))
+        );
+
+      function setQuick(from, to) {
+        document.getElementById("dateFrom").value = from;
+        document.getElementById("dateTo").value = to;
+        renderReports();
+      }
+      function formatDateYYYYMMDD(d) {
+        return d.toISOString().slice(0, 10);
+      }
+      function startOfWeek(d) {
+        const n = new Date(d);
+        const day = (n.getDay() + 6) % 7;
+        n.setHours(0, 0, 0, 0);
+        n.setDate(n.getDate() - day);
+        return n;
+      }
+      function endOfWeek(d) {
+        const s = startOfWeek(d);
+        const e = new Date(s);
+        e.setDate(e.getDate() + 6);
+        return e;
+      }
+      function quickToday() {
+        const d = new Date();
+        setQuick(formatDateYYYYMMDD(d), formatDateYYYYMMDD(d));
+      }
+      function quickWeek() {
+        const s = startOfWeek(new Date());
+        const e = endOfWeek(new Date());
+        setQuick(formatDateYYYYMMDD(s), formatDateYYYYMMDD(e));
+      }
+      function quickMonth() {
+        const d = new Date();
+        const s = new Date(d.getFullYear(), d.getMonth(), 1);
+        const e = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        setQuick(formatDateYYYYMMDD(s), formatDateYYYYMMDD(e));
+      }
+
+      document
+        .getElementById("quickToday")
+        .addEventListener("click", quickToday);
+      document.getElementById("quickWeek").addEventListener("click", quickWeek);
+      document
+        .getElementById("quickMonth")
+        .addEventListener("click", quickMonth);
+
+      // ====== Инициализация ======
+      refreshClientsSelect();
+      fillFilterClients();
+      computeOrder();
+      renderOrders("");
+    </script>
+  </body>
+</html>
