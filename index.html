@@ -355,11 +355,11 @@
             <b>Новые заказы</b>
           </div>
           <div class="actions">
-            <button id="openReportsBtn" class="good">Отчёты</button>
-            <button id="openClientsBtn">База клиентов</button>
             <button id="openAddClientBtn" class="muted">
               Добавить клиента
             </button>
+            <button id="openClientsBtn">База клиентов</button>
+            <button id="openReportsBtn" class="good">Отчёты</button>
             <button id="openSettingsBtn">Настройки</button>
           </div>
         </div>
@@ -453,7 +453,7 @@
           <div class="topbar">
             <input
               id="searchOrders"
-              placeholder="Поиск по имени клиента…"
+              placeholder="Поиск по ID заказа или имени клиента…"
               style="flex: 1"
             />
             <span class="pill" id="ordersCount">0 заказов</span>
@@ -861,88 +861,90 @@
             .join("");
       }
 
-      function renderClients(filter = "") {
-        const tb = document.getElementById("clientsTbody");
+      function renderClients(filter = '') {
+        const tb = document.getElementById('clientsTbody');
         const list = getClients();
-        const needle = (filter || searchClients.value || "")
+
+        const needle = (filter || (document.getElementById('searchClients')?.value) || '')
           .trim()
           .toLowerCase();
+        const idNeedle = needle.replace(/\s/g, '');
+
         const filtered = !needle
           ? list
-          : list.filter(
-              (x) =>
-                (x.name || "").toLowerCase().includes(needle) ||
-                (x.phone || "").toLowerCase().includes(needle) ||
-                (x.address || "").toLowerCase().includes(needle)
+          : list.filter(x =>
+              x.id?.toString().includes(idNeedle) ||                  // ← поиск по ID клиента
+              (x.name || '').toLowerCase().includes(needle) ||        // по имени
+              (x.phone || '').toLowerCase().includes(needle) ||       // по телефону
+              (x.address || '').toLowerCase().includes(needle)        // по адресу
             );
-        tb.innerHTML = "";
+
+        tb.innerHTML = '';
         for (const c of filtered) {
-          const tr = document.createElement("tr");
+          const tr = document.createElement('tr');
           tr.innerHTML = `
-          <td data-label="ID">${c.id}</td>
-          <td data-label="Имя">${escapeHtml(c.name)}</td>
-          <td data-label="Телефон">${escapeHtml(c.phone || "")}</td>
-          <td data-label="Адрес">${escapeHtml(c.address || "")}</td>
-          <td data-label="Действия">
-            <div class="actions table-actions">
-              <button onclick="openEditClient(${c.id})">Редакт.</button>
-              <button class="danger" onclick="deleteClient(${
-                c.id
-              })">Удалить</button>
-            </div>
-          </td>`;
+            <td data-label="ID">${c.id}</td>
+            <td data-label="Имя">${escapeHtml(c.name)}</td>
+            <td data-label="Телефон">${escapeHtml(c.phone || '')}</td>
+            <td data-label="Адрес">${escapeHtml(c.address || '')}</td>
+            <td data-label="Действия">
+              <div class="actions table-actions">
+                <button onclick="openEditClient(${c.id})">Редакт.</button>
+                <button class="danger" onclick="deleteClient(${c.id})">Удалить</button>
+              </div>
+            </td>`;
           tb.appendChild(tr);
         }
-        document.getElementById(
-          "clientsCount"
-        ).innerText = `${filtered.length} записей`;
+        document.getElementById('clientsCount').innerText = `${filtered.length} записей`;
       }
 
-      function renderOrders(filter = "") {
-        const tb = document.getElementById("ordersTbody");
+      function renderOrders(filter = '') {
+        const tb = document.getElementById('ordersTbody');
         const orders = getOrders();
         const clients = getClients();
-        const needle = (filter || "").trim().toLowerCase();
-        const getClient = (id) =>
-          clients.find((c) => c.id === id) || {
-            name: "—",
-            phone: "",
-            address: "",
-          };
+
+        const needle = (filter || '').trim().toLowerCase();
+        const idNeedle = needle.replace(/\s/g, ''); // убрать пробелы
+
+        const getClient = (id) => clients.find(c => c.id === id) || { name: '—', phone: '', address: '' };
+
         const filtered = !needle
           ? orders
-          : orders.filter((o) =>
-              (getClient(o.clientId).name || "").toLowerCase().includes(needle)
-            );
-        tb.innerHTML = "";
+          : orders.filter(o => {
+              const c = getClient(o.clientId);
+              return (
+                o.id.toString().includes(idNeedle) ||                 // ← поиск по ID заказа
+                (c.name || '').toLowerCase().includes(needle) ||      // по имени клиента
+                (c.phone || '').toLowerCase().includes(needle)        // по телефону клиента
+              );
+            });
+
+        tb.innerHTML = '';
         for (const o of filtered) {
           const c = getClient(o.clientId);
-          const tr = document.createElement("tr");
+          const tr = document.createElement('tr');
           tr.innerHTML = `
-          <td data-label="ID">${o.id}</td>
-          <td data-label="Клиент">${escapeHtml(c.name)}</td>
-          <td data-label="Телефон">${escapeHtml(c.phone || "")}</td>
-          <td data-label="Кол-во">${o.qty}</td>
-          <td data-label="Длина">${fmt2(o.length)}</td>
-          <td data-label="Ширина">${fmt2(o.width)}</td>
-          <td data-label="м²">${fmt2(o.area)}</td>
-          <td data-label="₽/м²">${fmt2(o.price)}</td>
-          <td data-label="Итого"><b>${money(fmt2(o.total))}</b></td>
-          <td data-label="Создан">${new Date(o.createdAt).toLocaleString()}</td>
-          <td data-label="Действия">
-            <div class="actions table-actions">
-              <button class="primary" onclick="openOrderReport(${
-                o.id
-              })">Отчёт</button>
-              <button class="danger" onclick="deleteOrder(${
-                o.id
-              })">Удалить</button>
-            </div>
-          </td>`;
+            <td data-label="ID">${o.id}</td>
+            <td data-label="Клиент">${escapeHtml(c.name)}</td>
+            <td data-label="Телефон">${escapeHtml(c.phone || '')}</td>
+            <td data-label="Кол-во">${o.qty}</td>
+            <td data-label="Длина">${fmt2(o.length)}</td>
+            <td data-label="Ширина">${fmt2(o.width)}</td>
+            <td data-label="м²">${fmt2(o.area)}</td>
+            <td data-label="₽/м²">${fmt2(o.price)}</td>
+            <td data-label="Итого"><b>${money(fmt2(o.total))}</b></td>
+            <td data-label="Создан">${new Date(o.createdAt).toLocaleString()}</td>
+            <td data-label="Действия">
+              <div class="actions table-actions">
+                <button class="primary" onclick="openOrderReport(${o.id})">Отчёт</button>
+                <button class="danger" onclick="deleteOrder(${o.id})">Удалить</button>
+              </div>
+            </td>`;
           tb.appendChild(tr);
         }
         ordersCount.innerText = `${filtered.length} заказов`;
       }
+
 
       function escapeHtml(str) {
         return (str || "").replace(
